@@ -4,12 +4,41 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Image Analysis</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #imageContainer {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      #uploadedImage {
+        max-width: 500px;
+        max-height: 500px;
+        border: 1px solid #ccc;
+      }
+      #result {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+    </style>
   </head>
   <body>
     <h1>Upload an Image</h1>
     <input type="file" id="imageInput" accept="image/*" />
-    <p id="result"></p>
-    <p id="view"></p>
+
+    <div id="imageContainer">
+      <img
+        id="uploadedImage"
+        src=""
+        alt="Uploaded Image"
+        style="display: none"
+      />
+      <p id="result"></p>
+      <p id="view"></p>
+    </div>
 
     <script src="script.js"></script>
   </body>

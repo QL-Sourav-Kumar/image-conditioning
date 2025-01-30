@@ -94,7 +94,7 @@ function evaluateImage(image) {
   );
   console.log(`Overall Lighting Score: ${overallScore.toFixed(2)}%`);
 
-  result.innerHTML =
+  resultElement.innerHTML =
     `Brightness: ${brightness.toFixed(2)} (Score: ${brightnessScore.toFixed(
       2
     )}%) <br />` +
@@ -124,7 +124,13 @@ document
     reader.onload = function (e) {
       const img = new Image();
       img.src = e.target.result;
+
       img.onload = function () {
+        // Display the uploaded image
+        const uploadedImage = document.getElementById("uploadedImage");
+        uploadedImage.src = e.target.result;
+        uploadedImage.style.display = "block";
+
         evaluateImage(img);
       };
     };
