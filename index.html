@@ -9,41 +9,25 @@
         font-family: Arial, sans-serif;
         margin: 20px;
       }
-
       #imageContainer {
         display: flex;
-        flex-direction: column; /* Stack elements vertically on small screens */
-        align-items: center; /* Center-align items */
+        flex-wrap: wrap;
         gap: 20px;
         margin-top: 20px;
       }
-
-      #uploadedImage {
-        max-width: 100%; /* Make the image responsive */
-        height: auto; /* Maintain aspect ratio */
+      .image-wrapper {
+        flex: 1;
+        min-width: 300px;
+        text-align: center;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
         border: 1px solid #ccc;
       }
-
       #result {
         font-size: 18px;
-        text-align: center; /* Center-align text */
-      }
-
-      /* Media query for larger screens */
-      @media (min-width: 768px) {
-        #imageContainer {
-          flex-direction: row; /* Align items horizontally on larger screens */
-          align-items: flex-start; /* Align items to the top */
-        }
-
-        #uploadedImage {
-          max-width: 500px; /* Limit image width on larger screens */
-          max-height: 500px;
-        }
-
-        #result {
-          text-align: left; /* Align text to the left on larger screens */
-        }
+        margin-top: 20px;
       }
     </style>
   </head>
@@ -51,15 +35,31 @@
     <h1>Upload an Image</h1>
     <input type="file" id="imageInput" accept="image/*" />
 
+    <div>
+      <p>Ideal Brightness: 100 - 150</p>
+      <p>Ideal Contrast: 100 - 150</p>
+    </div>
+    <div id="result"></div>
+
     <div id="imageContainer">
-      <img
-        id="uploadedImage"
-        src=""
-        alt="Uploaded Image"
-        style="display: none"
-      />
-      <p id="result"></p>
-      <p id="view"></p>
+      <div class="image-wrapper">
+        <h3>Original Image</h3>
+        <img
+          id="originalImage"
+          src=""
+          alt="Original Image"
+          style="display: none"
+        />
+      </div>
+      <div class="image-wrapper">
+        <h3>Adjusted Image</h3>
+        <img
+          id="adjustedImage"
+          src=""
+          alt="Adjusted Image"
+          style="display: none"
+        />
+      </div>
     </div>
 
     <script src="script.js"></script>

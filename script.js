@@ -1,3 +1,49 @@
+document
+  .getElementById("imageInput")
+  .addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const img = new Image();
+      img.onload = function () {
+        // Display the original image
+        const originalImage = document.getElementById("originalImage");
+        originalImage.src = e.target.result;
+        originalImage.style.display = "block";
+
+        // Analyze the image
+        const { brightness, contrast } = calculateBrightnessAndContrast(img);
+        const { brightnessSegment, contrastSegment } =
+          segmentBrightnessAndContrast(brightness, contrast);
+
+        const adjustedImageData = adjustImage(img, brightness, contrast);
+        const adjustedImage = document.getElementById("adjustedImage");
+        adjustedImage.src = adjustedImageData;
+        adjustedImage.style.display = "block";
+
+        // Display the results
+        const resultElement = document.getElementById("result");
+        resultElement.innerHTML = `
+          <h2>Analysis Results</h2>
+          <p><strong>Brightness:</strong> ${brightness.toFixed(
+            2
+          )} (${brightnessSegment})</p>
+          <p><strong>Contrast:</strong> ${contrast.toFixed(
+            2
+          )} (${contrastSegment})</p>
+          <p><strong>Feedback:</strong> ${getFeedback(
+            brightnessSegment,
+            contrastSegment
+          )}</p>
+        `;
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
 function calculateBrightnessAndContrast(image) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -40,194 +86,65 @@ function calculateBrightnessAndContrast(image) {
   return { brightness, contrast };
 }
 
-function computeLightingScore(brightness, contrast) {
-  // Ideal ranges
-  const minBrightness = 100;
-  const maxBrightness = 150;
-  const minContrast = 50;
-  const maxContrast = 100;
+function segmentBrightnessAndContrast(brightness, contrast) {
+  // Segment brightness
+  let brightnessSegment;
+  if (brightness < 50) brightnessSegment = "Low";
+  else if (brightness < 150) brightnessSegment = "Medium";
+  else brightnessSegment = "High";
 
-  // Brightness score (0–100%)
-  let brightnessScore;
-  if (brightness < minBrightness) {
-    brightnessScore = (brightness / minBrightness) * 50; // Below ideal range
-  } else if (brightness > maxBrightness) {
-    brightnessScore =
-      100 - ((brightness - maxBrightness) / (255 - maxBrightness)) * 50; // Above ideal range
-  } else {
-    brightnessScore = 100; // Within ideal range
-  }
+  // Segment contrast
+  let contrastSegment;
+  if (contrast < 30) contrastSegment = "Low";
+  else if (contrast < 70) contrastSegment = "Medium";
+  else contrastSegment = "High";
 
-  // Contrast score (0–100%)
-  let contrastScore;
-  if (contrast < minContrast) {
-    contrastScore = (contrast / minContrast) * 50; // Below ideal range
-  } else if (contrast > maxContrast) {
-    contrastScore = 100 - ((contrast - maxContrast) / (255 - maxContrast)) * 50; // Above ideal range
-  } else {
-    contrastScore = 100; // Within ideal range
-  }
-
-  // Overall lighting score (average of brightness and contrast scores)
-  const overallScore = (brightnessScore + contrastScore) / 2;
-
-  return { brightnessScore, contrastScore, overallScore };
+  return { brightnessSegment, contrastSegment };
 }
 
-function evaluateImage(image) {
-  const resultElement = document.getElementById("result");
-  const viewElement = document.getElementById("view");
+function adjustImage(image, brightness, contrast) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
-  const { brightness, contrast } = calculateBrightnessAndContrast(image);
-  const { brightnessScore, contrastScore, overallScore } = computeLightingScore(
-    brightness,
-    contrast
-  );
+  canvas.width = image.width;
+  canvas.height = image.height;
 
-  console.log(
-    `Brightness: ${brightness.toFixed(2)} (Score: ${brightnessScore.toFixed(
-      2
-    )}%)`
-  );
-  console.log(
-    `Contrast: ${contrast.toFixed(2)} (Score: ${contrastScore.toFixed(2)}%)`
-  );
-  console.log(`Overall Lighting Score: ${overallScore.toFixed(2)}%`);
+  // Draw the image onto the canvas
+  ctx.drawImage(image, 0, 0);
 
-  resultElement.innerHTML =
-    `Brightness: ${brightness.toFixed(2)} (Score: ${brightnessScore.toFixed(
-      2
-    )}%) <br />` +
-    `Contrast: ${contrast.toFixed(2)} (Score: ${contrastScore.toFixed(
-      2
-    )}%) <br />` +
-    `Overall Lighting Score: ${overallScore.toFixed(2)}% <br />`;
+  // Get the image data (RGBA format)
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
 
-  if (overallScore >= 90) {
-    viewElement.innerHTML = "The image has excellent lighting conditions.";
-  } else if (overallScore >= 70) {
-    viewElement.innerHTML =
-      "The image has good lighting conditions but could be improved.";
-  } else {
-    viewElement.innerHTML =
-      "The image has poor lighting conditions. Please retake it.";
+  // Adjust brightness and contrast
+  const brightnessAdjustment = 128 - brightness; // Adjust brightness to midpoint (128)
+  const contrastAdjustment = 1.5; // Increase contrast by 50%
+
+  for (let i = 0; i < data.length; i += 4) {
+    // Adjust brightness
+    data[i] += brightnessAdjustment; // Red
+    data[i + 1] += brightnessAdjustment; // Green
+    data[i + 2] += brightnessAdjustment; // Blue
+
+    // Adjust contrast
+    data[i] = (data[i] - 128) * contrastAdjustment + 128; // Red
+    data[i + 1] = (data[i + 1] - 128) * contrastAdjustment + 128; // Green
+    data[i + 2] = (data[i + 2] - 128) * contrastAdjustment + 128; // Blue
   }
+
+  // Put the adjusted data back onto the canvas
+  ctx.putImageData(imageData, 0, 0);
+
+  // Return the adjusted image as a data URL
+  return canvas.toDataURL();
 }
 
-document
-  .getElementById("imageInput")
-  .addEventListener("change", function (event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const img = new Image();
-      img.src = e.target.result;
-
-      img.onload = function () {
-        // Display the uploaded image
-        const uploadedImage = document.getElementById("uploadedImage");
-        uploadedImage.src = e.target.result;
-        uploadedImage.style.display = "block";
-
-        evaluateImage(img);
-      };
-    };
-    reader.readAsDataURL(file);
-  });
-
-// function checkTranslucency(image) {
-//   const canvas = document.createElement("canvas");
-//   const ctx = canvas.getContext("2d");
-
-//   canvas.width = image.width;
-//   canvas.height = image.height;
-
-//   // Draw the image onto the canvas
-//   ctx.drawImage(image, 0, 0);
-
-//   // Get the image data (RGBA format)
-//   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-//   const data = imageData.data;
-
-//   let isTranslucent = false;
-
-//   // Loop through the pixel data (4 values per pixel: R, G, B, A)
-//   for (let i = 3; i < data.length; i += 4) {
-//     const alpha = data[i]; // Alpha value of the pixel
-//     if (alpha > 0 && alpha < 255) {
-//       isTranslucent = true;
-//       break;
-//     }
-//   }
-
-//   return isTranslucent;
-// }
-
-// function analyzeLighting(image) {
-//   const canvas = document.createElement("canvas");
-//   const ctx = canvas.getContext("2d");
-
-//   canvas.width = image.width;
-//   canvas.height = image.height;
-
-//   // Draw the image onto the canvas
-//   ctx.drawImage(image, 0, 0);
-
-//   // Get the image data (RGBA format)
-//   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-//   const data = imageData.data;
-
-//   let sum = 0;
-//   let sumSquared = 0;
-//   let pixelCount = 0;
-
-//   // Loop through the pixel data (4 values per pixel: R, G, B, A)
-//   for (let i = 0; i < data.length; i += 4) {
-//     const r = data[i];
-//     const g = data[i + 1];
-//     const b = data[i + 2];
-
-//     // Calculate pixel intensity (average of R, G, B)
-//     const intensity = (r + g + b) / 3;
-
-//     sum += intensity;
-//     sumSquared += intensity * intensity;
-//     pixelCount++;
-//   }
-
-//   // Calculate brightness (average intensity)
-//   const brightness = sum / pixelCount;
-
-//   // Calculate contrast (standard deviation of intensity)
-//   const variance = sumSquared / pixelCount - (sum / pixelCount) ** 2;
-//   const contrast = Math.sqrt(variance);
-
-//   // Determine lighting conditions
-//   if (brightness < 50) {
-//     return "The image is too dark. Please retake it in better lighting.";
-//   } else if (brightness > 200) {
-//     return "The image is overexposed. Please avoid strong light.";
-//   } else if (contrast < 30) {
-//     return "The image has low contrast. Please ensure proper lighting.";
-//   } else {
-//     return "The image is suitable for replication.";
-//   }
-// }
-
-// function evaluateImage(image) {
-//   const resultElement = document.getElementById("result");
-
-//   console.log(resultElement)
-
-//   // Check translucency
-//   const isTranslucent = checkTranslucency(image);
-//   resultElement.innerHTML = isTranslucent
-//     ? "The image contains translucent pixels.<br>"
-//     : "The image does not contain translucent pixels.<br>";
-
-//   // Analyze lighting
-//   const lightingFeedback = analyzeLighting(image);
-//   resultElement.innerHTML += lightingFeedback;
-// }
+function getFeedback(brightnessSegment, contrastSegment) {
+  if (brightnessSegment === "Low" || contrastSegment === "Low") {
+    return "The image is too dark or has low contrast. It has been adjusted for better visibility.";
+  } else if (brightnessSegment === "High" || contrastSegment === "High") {
+    return "The image is overexposed or has high contrast. It has been adjusted for better visibility.";
+  } else {
+    return "The image has good brightness and contrast.";
+  }
+}
